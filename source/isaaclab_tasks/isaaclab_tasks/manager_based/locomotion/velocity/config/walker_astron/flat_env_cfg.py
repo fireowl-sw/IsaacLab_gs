@@ -98,7 +98,7 @@ class WalkerAstronRewards(RewardsCfg):
     # 这里当检测到关节偏离“默认参考姿态”时，给予小幅惩罚，迫使机器人保持上身端庄和髋部姿态端正。
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.2,
+        weight=-0.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_yaw_joint", ".*_hip_roll_joint"])},
     )
     joint_deviation_arms = RewTerm(
@@ -106,16 +106,16 @@ class WalkerAstronRewards(RewardsCfg):
         weight=-0.2,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_shoulder_.*_joint", ".*_elbow_.*_joint"])},
     )
-    # 8. 惩罚腰部关节偏离默认挺直站姿（权重从 -0.2 加强到 -0.5，进一步抑制弯腰后仰）
+    # 8. 惩罚腰部关节偏离默认挺直站姿（权重提高到 -1.5，极力压制腰部左右侧弯和扭动）
     joint_deviation_waist = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.5,
+        weight=-1.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=["waist_.*_joint"])},
     )
-    # 9. 惩罚头部关节偏离默认位置（权重 -0.2，防止脑壳乱歪乱转）
+    # 9. 惩罚头部关节偏离默认前方位置（权重提高到 -1.5，强制锁死脖子，让相机直视前方）
     joint_deviation_head = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.2,
+        weight=-1.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=["head_.*_joint"])},
     )
 
@@ -164,7 +164,7 @@ class WalkerAstronFlatEnvCfg(LocomotionVelocityRoughEnvCfg):
         
         # === 5. 平衡性能与控制频率平滑微调 ===
         self.rewards.undesired_contacts = None
-        self.rewards.flat_orientation_l2.weight = -3.0 # 加强惩罚躯干（Base）的歪斜，从 -1.0 提高到 -3.0，迫使机器人保持脊椎垂直
+        self.rewards.flat_orientation_l2.weight = -5.0 # 极强惩罚躯干（Base）的歪斜，从 -3.0 提高到 -5.0，迫使机器人保持脊椎垂直
         self.rewards.dof_torques_l2.weight = 0.0
         self.rewards.action_rate_l2.weight = -0.005    # 惩罚控制动作输出的突变，让电机指令更平滑，防止抖动
         self.rewards.dof_acc_l2.weight = -1.25e-7      # 惩罚过大的关节加速度
