@@ -109,14 +109,14 @@ WALKER_ASTRON_CFG = ArticulationCfg(
                 "[LR]_hip_roll_joint": 110.0,    # 髋部侧摆控制侧向跨步
                 "[LR]_knee_pitch_joint": 200.0,   # 膝部大负荷支撑关节
                 "waist_pitch_joint": 180.0,       # 腰部俯仰控制上半身直立
-                "waist_roll_joint": 150.0,        # 腰部翻滚稳定左/右平衡
+                "waist_roll_joint": 250.0,        # 提高腰部侧摆刚度（从 150 提高到 250，防止侧弯）
             },
             damping={
                 "[LR]_hip_pitch_joint": 10.0,
                 "[LR]_hip_roll_joint": 10.0,
                 "[LR]_knee_pitch_joint": 10.0,
                 "waist_pitch_joint": 5.0,
-                "waist_roll_joint": 3.0,
+                "waist_roll_joint": 8.0,          # 提高阻尼防止侧摆震荡
             },
         ),
         
@@ -129,11 +129,11 @@ WALKER_ASTRON_CFG = ArticulationCfg(
             effort_limit_sim=100,
             stiffness={
                 "[LR]_hip_yaw_joint": 50.0,     # 控制腿部内八/外八
-                "waist_yaw_joint": 80.0,        # 控制上半身左右扭腰
+                "waist_yaw_joint": 180.0,        # 提高腰部偏航刚度（从 80 提高到 180）
             },
             damping={
                 "[LR]_hip_yaw_joint": 5.0,
-                "waist_yaw_joint": 4.0,
+                "waist_yaw_joint": 8.0,          # 提高阻尼
             },
         ),
         

@@ -106,10 +106,10 @@ class WalkerAstronRewards(RewardsCfg):
         weight=-0.2,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_shoulder_.*_joint", ".*_elbow_.*_joint"])},
     )
-    # 8. 惩罚腰部关节偏离默认挺直站姿（权重提高到 -1.5，极力压制腰部左右侧弯和扭动）
+    # 8. 惩罚腰部关节偏离默认挺直站姿（权重提高到 -2.5，极力压制腰部左右侧弯和扭动）
     joint_deviation_waist = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.5,
+        weight=-2.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=["waist_.*_joint"])},
     )
     # 9. 惩罚头部关节偏离默认前方位置（权重提高到 -1.5，强制锁死脖子，让相机直视前方）
