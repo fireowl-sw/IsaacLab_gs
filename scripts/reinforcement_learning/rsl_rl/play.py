@@ -212,6 +212,30 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
             export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
 
+        # Check if we should use keyboard teleoperation (for single environment playback)
+        if env.unwrapped.num_envs == 1:
+            try:
+                from isaaclab.devices.keyboard import Se2Keyboard, Se2KeyboardCfg
+                import numpy as np
+                teleop_device = Se2Keyboard(Se2KeyboardCfg(v_x_sensitivity=0.8, v_y_sensitivity=0.4, omega_z_sensitivity=1.0))
+                
+                # 为满足用户习惯，直接在按键映射中注入 W/S/A/D 支持
+                teleop_device._INPUT_KEY_MAPPING["W"] = np.asarray([1.0, 0.0, 0.0]) * teleop_device.v_x_sensitivity
+                teleop_device._INPUT_KEY_MAPPING["S"] = np.asarray([-1.0, 0.0, 0.0]) * teleop_device.v_x_sensitivity
+                teleop_device._INPUT_KEY_MAPPING["A"] = np.asarray([0.0, 0.0, 1.0]) * teleop_device.omega_z_sensitivity
+                teleop_device._INPUT_KEY_MAPPING["D"] = np.asarray([0.0, 0.0, -1.0]) * teleop_device.omega_z_sensitivity
+                
+                print("[INFO] Keyboard teleoperation enabled!")
+                print("====================================================")
+                print("  W / ↑ : Move Forward     S / ↓ : Move Backward")
+                print("  A / Z : Turn Left        D / X : Turn Right")
+                print("====================================================")
+            except Exception as e:
+                print(f"[WARNING] Failed to initialize keyboard device: {e}")
+                teleop_device = None
+        else:
+            teleop_device = None
+
         dt = env.unwrapped.step_dt
 
         # reset environment
@@ -223,6 +247,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 start_time = time.time()
                 # run everything in inference mode
                 with torch.inference_mode():
+                    # 拦截并写入键盘摇控输入，直接重写环境中的 Command Tensor
+                    if teleop_device is not None:
+                        cmd = teleop_device.advance()
+                        env.unwrapped.command_manager.get_term("base_velocity").vel_command_b[:] = cmd.to(env.unwrapped.device)
                     # agent stepping
                     actions = policy(obs)
                     # env stepping
