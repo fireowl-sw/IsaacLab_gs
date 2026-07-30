@@ -167,6 +167,18 @@ exclude = [
     ".git",
     ".vscode",
 ]
+extraPaths = [
+    "source/isaaclab",
+    "source/isaaclab_tasks",
+    "source/isaaclab_assets",
+    "source/isaaclab_mimic",
+    "source/isaaclab_teleop",
+    "source/isaaclab_newton",
+    "source/isaaclab_ov",
+    "source/isaaclab_rl",
+    "source/isaaclab_visualizers",
+    "source/isaaclab_contrib"
+]
 
 typeCheckingMode = "basic"
 pythonVersion = "3.12"
