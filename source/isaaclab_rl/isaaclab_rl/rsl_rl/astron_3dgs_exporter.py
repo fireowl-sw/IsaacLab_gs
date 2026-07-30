@@ -63,22 +63,12 @@ class Astron3DGSExporter:
         self.mmap_obj.seek(64)
         self.mmap_obj.write(meta_bytes)
         
-        # 5. 预设相机内参 (用于高斯投影光栅化)
-        self.width = 1920
-        self.height = 1080
-        fx = (50.0 / 36.0) * self.width
-        fy = fx
-        cx = self.width / 2.0
-        cy = self.height / 2.0
-        
-        # 每个环境共享这套内参
+        # 5. 预设相机内参 (根据工具箱约定，将 Focal Length 与 Horizontal Aperture 分别存在 [0,0] 和 [1,1] 处)
         intrinsics = np.zeros((self.max_envs, 3, 3), dtype=np.float32)
         for i in range(self.max_envs):
-            intrinsics[i] = [
-                [fx, 0.0, cx],
-                [0.0, fy, cy],
-                [0.0, 0.0, 1.0]
-            ]
+            intrinsics[i, 0, 0] = 50.0  # 焦距 Focal Length
+            intrinsics[i, 1, 1] = 36.0  # 光圈画幅 Horizontal Aperture
+            
         self.mmap_obj.seek(self.intrinsics_offset)
         self.mmap_obj.write(intrinsics.tobytes())
         
@@ -152,12 +142,23 @@ class Astron3DGSExporter:
         self.mmap_obj.write(cams_mat.tobytes())
         
         sim_time = self.env.sim.current_time if hasattr(self.env.sim, "current_time") else 0.0
-        header_bytes = struct.pack("!IIId", MAGIC, self.frame_idx, self.num_envs, sim_time)
-        self.mmap_obj.seek(0)
-        self.mmap_obj.write(header_bytes)
         
+        # 写入 mmap 头部 (64 字节，对齐 =IIIId40x 格式)
+        header_data = struct.pack(
+            "=IIIId40x",
+            MAGIC,
+            self.frame_idx,
+            self.num_envs,
+            len(self.link_names),
+            sim_time
+        )
+        self.mmap_obj.seek(0)
+        self.mmap_obj.write(header_data)
+        
+        # 发送 20 字节 UDP 网络信号脉冲 (!IIId 格式)
+        signal_pkt = struct.pack("!IIId", MAGIC, self.frame_idx, self.num_envs, sim_time)
         try:
-            self.sock.sendto(header_bytes, self.target_addr)
+            self.sock.sendto(signal_pkt, self.target_addr)
         except Exception:
             pass
             
