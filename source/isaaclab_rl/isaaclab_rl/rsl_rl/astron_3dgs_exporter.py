@@ -86,25 +86,28 @@ class Astron3DGSExporter:
         print(f"[3DGS Exporter] Initialized with {self.num_envs} envs, writing to {self.shm_file}")
 
     def quat_to_matrix_numpy(self, quats, pos):
-        """批量将四元数与位置转化为 4x4 变换矩阵 (NumPy 加速)"""
+        """批量将四元数与位置转化为 4x4 变换矩阵 (NumPy 加速 - 采用 row-vector 行向量约定)"""
         N = quats.shape[0]
         w, x, y, z = quats[:, 0], quats[:, 1], quats[:, 2], quats[:, 3]
         
         R = np.zeros((N, 4, 4), dtype=np.float32)
+        # 旋转部分在其 3x3 矩阵中 (行优先)
         R[:, 0, 0] = 1 - 2*y**2 - 2*z**2
         R[:, 0, 1] = 2*x*y - 2*w*z
         R[:, 0, 2] = 2*x*z + 2*w*y
-        R[:, 0, 3] = pos[:, 0]
         
         R[:, 1, 0] = 2*x*y + 2*w*z
         R[:, 1, 1] = 1 - 2*x**2 - 2*z**2
         R[:, 1, 2] = 2*y*z - 2*w*x
-        R[:, 1, 3] = pos[:, 1]
         
         R[:, 2, 0] = 2*x*z - 2*w*y
-        R[:, 2, 2] = 1 - 2*x**2 - 2*y**2
         R[:, 2, 1] = 2*y*z + 2*w*x
-        R[:, 2, 3] = pos[:, 2]
+        R[:, 2, 2] = 1 - 2*x**2 - 2*y**2
+        
+        # 平移部分在最后一行 (row-vector convention)
+        R[:, 3, 0] = pos[:, 0]
+        R[:, 3, 1] = pos[:, 1]
+        R[:, 3, 2] = pos[:, 2]
         
         R[:, 3, 3] = 1.0
         return R
@@ -130,6 +133,7 @@ class Astron3DGSExporter:
             cam_pos = base_pos + np.array([-2.2, -1.8, 0.75])
             target = base_pos + np.array([0.0, 0.0, 0.2])
             
+            # 建立 Look-At 矩阵
             forward = target - cam_pos
             forward = forward / np.linalg.norm(forward)
             right = np.cross(forward, [0.0, 0.0, 1.0])
@@ -137,10 +141,10 @@ class Astron3DGSExporter:
             up = np.cross(right, forward)
             
             cam_matrix = np.eye(4, dtype=np.float32)
-            cam_matrix[:3, 0] = right
-            cam_matrix[:3, 1] = up
-            cam_matrix[:3, 2] = -forward
-            cam_matrix[:3, 3] = cam_pos
+            cam_matrix[0, :3] = right
+            cam_matrix[1, :3] = up
+            cam_matrix[2, :3] = -forward
+            cam_matrix[3, :3] = cam_pos # 平移在最后一行
             
             cams_mat[env_idx] = cam_matrix
             
