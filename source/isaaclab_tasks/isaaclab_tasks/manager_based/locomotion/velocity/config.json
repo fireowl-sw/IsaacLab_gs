@@ -10,7 +10,7 @@
   },
   "rendering": {
     "resolution": [1920, 1080],
-    "camera_name": "perspective",
+    "camera_name": "head_stereo_left",
     "active_env_idx": 0,
     "output_dir": "/home/ubt/3dgs_evaluation/robot_3dgs_toolbox/outputs/rendered_frames/"
   },

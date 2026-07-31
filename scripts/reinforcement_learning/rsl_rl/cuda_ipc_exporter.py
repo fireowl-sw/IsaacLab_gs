@@ -43,8 +43,9 @@ class CudaIpcExporter:
         
         self.frame_idx = 0
         self.link_names = []
-        self.link_name_to_idx = {}
         self.camera_prim = None
+        self.camera_parent_link_idx = -1
+        self.camera_local_offset = None
         
     def _load_config(self):
         if self.config_path.exists():
@@ -63,6 +64,8 @@ class CudaIpcExporter:
                         print(f"[CudaIpcExporter] Camera name changed from '{self.camera_name}' to '{new_camera_name}', triggering re-discovery...")
                         self.camera_name = new_camera_name
                         self.camera_prim = None
+                        self.camera_parent_link_idx = -1
+                        self.camera_local_offset = None
                     self.active_env_idx = rendering_cfg.get("active_env_idx", self.active_env_idx)
                     self.shm_file_path = self.config_path.resolve().parent / self.shm_name
                     print(f"[CudaIpcExporter] Loaded config from '{self.config_path}' -> active_env_idx: {self.active_env_idx}, camera_name: '{self.camera_name}'")
@@ -103,40 +106,78 @@ class CudaIpcExporter:
         print(f"[CudaIpcExporter] Shared Memory (SHM) Exporter started at: {self.shm_file_path} ({self.shm_size / (1024*1024):.2f} MB)")
 
     def _discover_camera(self):
-        """寻找配置的相机 Prim"""
+        """寻找配置的相机 Prim，并自动检测其绑定的父连杆及局部偏移量以实现实时跟踪"""
         if self.stage is None:
             return None
         
         target_cam = self.camera_name.lower()
         from pxr import UsdGeom
         
+        prim = None
+        
         # 0. 优先匹配 Omniverse Kit 的 Perspective 视口编辑相机
         if target_cam == "perspective" or target_cam == "persp" or target_cam == "omniversekit_persp":
-            for prim in self.stage.Traverse():
-                if prim.GetTypeName() == "Camera":
-                    ppath = prim.GetPath().pathString.lower()
+            for p in self.stage.Traverse():
+                if p.GetTypeName() == "Camera":
+                    ppath = p.GetPath().pathString.lower()
                     if "/omniversekit_persp" in ppath:
-                        print(f"[CudaIpcExporter] Successfully bound to editor perspective viewport camera: '{prim.GetPath().pathString}'")
-                        return prim
+                        print(f"[CudaIpcExporter] Successfully bound to editor perspective viewport camera: '{p.GetPath().pathString}'")
+                        prim = p
+                        break
         
         # 1. 尝试模糊匹配名称
-        for prim in self.stage.Traverse():
-            if prim.GetTypeName() == "Camera":
-                pname = prim.GetName().lower()
-                ppath = prim.GetPath().pathString.lower()
-                clean_target = target_cam.replace("_camera", "").strip()
-                if (target_cam in pname) or (target_cam in ppath) or (clean_target in pname) or (clean_target in ppath):
-                    print(f"[CudaIpcExporter] Camera matched: '{prim.GetPath().pathString}'")
-                    return prim
+        if prim is None:
+            for p in self.stage.Traverse():
+                if p.GetTypeName() == "Camera":
+                    pname = p.GetName().lower()
+                    ppath = p.GetPath().pathString.lower()
+                    clean_target = target_cam.replace("_camera", "").strip()
+                    if (target_cam in pname) or (target_cam in ppath) or (clean_target in pname) or (clean_target in ppath):
+                        print(f"[CudaIpcExporter] Camera matched: '{p.GetPath().pathString}'")
+                        prim = p
+                        break
         
         # 2. 备选降级：抓取第一个有效相机
-        for prim in self.stage.Traverse():
-            if prim.GetTypeName() == "Camera":
-                ppath = prim.GetPath().pathString.lower()
-                if not any(sys_c in ppath for sys_c in ["/omniversekit_", "/front", "/top", "/right"]):
-                    print(f"[CudaIpcExporter] Camera fallback to: '{prim.GetPath().pathString}'")
-                    return prim
+        if prim is None:
+            for p in self.stage.Traverse():
+                if p.GetTypeName() == "Camera":
+                    ppath = p.GetPath().pathString.lower()
+                    if not any(sys_c in ppath for sys_c in ["/omniversekit_", "/front", "/top", "/right"]):
+                        print(f"[CudaIpcExporter] Camera fallback to: '{p.GetPath().pathString}'")
+                        prim = p
+                        break
         
+        if prim is not None:
+            # 寻找该相机绑定的父连杆 (遍历父路径以匹配 self.link_names 中的连杆名)
+            curr_prim = prim
+            self.camera_parent_link_idx = -1
+            self.camera_local_offset = None
+            
+            while curr_prim:
+                name = curr_prim.GetName()
+                if name in self.link_names:
+                    self.camera_parent_link_idx = self.link_names.index(name)
+                    break
+                curr_prim = curr_prim.GetParent()
+                
+            if self.camera_parent_link_idx != -1:
+                try:
+                    import numpy as np
+                    camera_geom = UsdGeom.Camera(prim)
+                    cam_world_0 = np.array(camera_geom.ComputeLocalToWorldTransform(0.0), dtype=np.float32)
+                    link_prim = self.stage.GetPrimAtPath(curr_prim.GetPath())
+                    link_world_0 = np.array(UsdGeom.Xformable(link_prim).ComputeLocalToWorldTransform(0.0), dtype=np.float32)
+                    # 计算相机相对于父连杆的局部坐标系静态偏移矩阵 (行优先矩阵乘法)
+                    self.camera_local_offset = cam_world_0 @ np.linalg.inv(link_world_0)
+                    print(f"[CudaIpcExporter] Camera is mounted on robot link '{self.link_names[self.camera_parent_link_idx]}'. Computed local relative offset.")
+                except Exception as e:
+                    print(f"[CudaIpcExporter] Warning: Failed to calculate camera relative offset: {e}")
+                    self.camera_parent_link_idx = -1
+            else:
+                print("[CudaIpcExporter] Camera is not mounted on any robot link (independent global/editor camera).")
+                
+            return prim
+            
         return None
 
     def export_tensors(self, env):
@@ -230,11 +271,19 @@ class CudaIpcExporter:
         if self.camera_prim is not None:
             from pxr import UsdGeom
             camera_geom = UsdGeom.Camera(self.camera_prim)
-            world_transform = camera_geom.ComputeLocalToWorldTransform(sim_time)
-            cam_mat = np.array(world_transform, dtype=np.float32)
-            # 广播/填充相机外参
-            for env_i in range(num_envs):
-                cams_mat[env_i] = cam_mat
+            
+            # 如果是挂载在机器人关节上的相机，通过该关节的实时变换矩阵和静态局部相对偏移，推算其实时相机外参
+            if self.camera_parent_link_idx != -1 and self.camera_local_offset is not None:
+                for env_i in range(num_envs):
+                    # 获取该环境对应连杆的实时 GPU 齐次变换矩阵
+                    link_mat_t = links_mat_np[env_i, self.camera_parent_link_idx]
+                    # 行优先矩阵乘法：M_camera_world_t = M_camera_local_offset @ M_link_world_t
+                    cams_mat[env_i] = self.camera_local_offset @ link_mat_t
+            else:
+                world_transform = camera_geom.ComputeLocalToWorldTransform(sim_time)
+                cam_mat = np.array(world_transform, dtype=np.float32)
+                for env_i in range(num_envs):
+                    cams_mat[env_i] = cam_mat
                 
             fl = camera_geom.GetFocalLengthAttr().Get(sim_time) or 50.0
             ha = camera_geom.GetHorizontalApertureAttr().Get(sim_time) or 36.0
