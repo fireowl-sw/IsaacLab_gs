@@ -93,6 +93,7 @@ class CudaIpcExporter:
         # 强制将 Fabric 物理结果写回 USD Stage (为了读取相机外参)
         try:
             import carb
+            import carb.settings
             settings = carb.settings.get_settings()
             for key in ["/physics/updateToUsd", "/persistent/physics/updateToUsd", "/physx/updateToUsd"]:
                 settings.set(key, True)
@@ -197,6 +198,8 @@ class CudaIpcExporter:
                     usd_world_mat = np.array(xform.ComputeLocalToWorldTransform(sim_time), dtype=np.float32)
                     gpu_world_mat = links_mat_np[0, 0]
                     print(f"\n[CudaIpcExporter] Verification for first link '{first_link_name}':")
+                    print(f"Raw body_quat_w from Isaac Lab: {quat[0, 0].cpu().numpy()}")
+                    print(f"Rolled quat_xyzw sent to matrix_from_quat: {quat_xyzw[0, 0].cpu().numpy()}")
                     print("USD Stage ComputeLocalToWorldTransform Matrix:")
                     print(usd_world_mat)
                     print("GPU-Vectorized body_pos_w/body_quat_w Matrix:")
