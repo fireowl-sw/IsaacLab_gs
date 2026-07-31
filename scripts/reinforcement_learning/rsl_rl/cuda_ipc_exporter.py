@@ -180,6 +180,11 @@ class CudaIpcExporter:
         mats_gpu = torch.zeros((num_envs, num_links, 4, 4), dtype=torch.float32, device=pos.device)
         # 按照 USD 行优先存储规则：mats_gpu[..., :3, :3] = R.T (即 columns 旋转)，mats_gpu[..., 3, :3] = T
         mats_gpu[..., :3, :3] = rotation_gpu.transpose(-1, -2)
+        
+        # 修正 CAD 导出时的轴向差异：绕局部 Z 轴旋转 180 度（将 X 和 Y 轴分量取反）
+        mats_gpu[..., 0, :3] *= -1
+        mats_gpu[..., 1, :3] *= -1
+        
         mats_gpu[..., 3, :3] = pos
         mats_gpu[..., 3, 3] = 1.0
 
