@@ -88,3 +88,6 @@ _build
 
 # Superpowers (Claude Code plugin artifacts)
 docs/superpowers/
+
+# 3DGS IPC shared memory file
+**/robot_3dgs_shm
