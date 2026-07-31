@@ -32,7 +32,7 @@ class CudaIpcExporter:
         self.signal_port = 12347
         self.camera_name = "camera"
         self.host = "127.0.0.1"
-        self.shm_file_path = Path("/dev/shm") / self.shm_name
+        self.shm_file_path = self.config_path.resolve().parent / self.shm_name
         self.active_env_idx = 0
         
         self._load_config()
@@ -60,7 +60,7 @@ class CudaIpcExporter:
                     rendering_cfg = cfg.get("rendering", {})
                     self.camera_name = rendering_cfg.get("camera_name", self.camera_name)
                     self.active_env_idx = rendering_cfg.get("active_env_idx", self.active_env_idx)
-                    self.shm_file_path = Path("/dev/shm") / self.shm_name
+                    self.shm_file_path = self.config_path.resolve().parent / self.shm_name
                     print(f"[CudaIpcExporter] Loaded config from '{self.config_path}' -> active_env_idx: {self.active_env_idx}, camera_name: '{self.camera_name}'")
             except Exception as e:
                 print(f"[CudaIpcExporter] Config load warning: {e}")
