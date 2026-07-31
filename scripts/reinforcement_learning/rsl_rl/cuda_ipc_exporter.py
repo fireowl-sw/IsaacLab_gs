@@ -185,6 +185,29 @@ class CudaIpcExporter:
         # 将 GPU 张量拉回到 CPU numpy
         links_mat_np = mats_gpu.cpu().numpy()
 
+        # 每隔 100 帧打印一次第一个 link 的 CPU/GPU 矩阵对比，用于诊断对齐/偏移问题
+        if self.frame_idx % 100 == 0 and self.stage is not None and len(self.link_names) > 0:
+            try:
+                from pxr import UsdGeom
+                first_link_name = self.link_names[0]
+                prim_path = f"/World/envs/env_0/Robot/{first_link_name}"
+                prim = self.stage.GetPrimAtPath(prim_path)
+                if prim.IsValid():
+                    xform = UsdGeom.Xformable(prim)
+                    usd_world_mat = np.array(xform.ComputeLocalToWorldTransform(sim_time), dtype=np.float32)
+                    gpu_world_mat = links_mat_np[0, 0]
+                    print(f"\n[CudaIpcExporter] Verification for first link '{first_link_name}':")
+                    print("USD Stage ComputeLocalToWorldTransform Matrix:")
+                    print(usd_world_mat)
+                    print("GPU-Vectorized body_pos_w/body_quat_w Matrix:")
+                    print(gpu_world_mat)
+                    print("Max Matrix Diff:")
+                    print(np.abs(usd_world_mat - gpu_world_mat).max())
+                else:
+                    print(f"[CudaIpcExporter] Verification Warning: Link prim path '{prim_path}' is not valid on stage.")
+            except Exception as ex:
+                print(f"[CudaIpcExporter] Verification print error: {ex}")
+
         # 2. 构建相机外参及内参矩阵
         cams_mat = np.zeros((self.max_envs, 4, 4), dtype=np.float32)
         intrinsics_mat = np.zeros((self.max_envs, 3, 3), dtype=np.float32)
