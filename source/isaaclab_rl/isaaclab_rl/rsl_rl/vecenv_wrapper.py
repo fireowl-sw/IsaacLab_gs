@@ -94,15 +94,6 @@ class RslRlVecEnvWrapper(VecEnv):
         # reset at the start since the RSL-RL runner does not call reset
         self.env.reset()
 
-        # Initialize 3DGS real-time pose exporter (only for Walker Astron task!)
-        self._3dgs_exporter = None
-        if "WalkerAstron" in self.env.unwrapped.cfg.__class__.__name__ or "walker_astron" in str(self.env.unwrapped.cfg.__class__).lower():
-            try:
-                from .astron_3dgs_exporter import Astron3DGSExporter
-                self._3dgs_exporter = Astron3DGSExporter(self.env.unwrapped)
-            except Exception as e:
-                print(f"[WARNING] Failed to initialize 3DGS exporter: {e}")
-
     def __str__(self):
         """Returns the wrapper name and the :attr:`env` representation string."""
         return f"<{type(self).__name__}{self.env}>"
@@ -192,11 +183,6 @@ class RslRlVecEnvWrapper(VecEnv):
             actions = torch.clamp(actions, -self.clip_actions, self.clip_actions)
         # record step information
         obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
-        
-        # 触发 3DGS 实时姿态推流
-        if self._3dgs_exporter is not None:
-            self._3dgs_exporter.step()
-            
         # compute dones for compatibility with RSL-RL
         dones = (terminated | truncated).to(dtype=torch.long)
         # move time out information to the extras dict
@@ -207,8 +193,6 @@ class RslRlVecEnvWrapper(VecEnv):
         return TensorDict(obs_dict, batch_size=[self.num_envs]), rew, dones, extras
 
     def close(self):  # noqa: D102
-        if self._3dgs_exporter is not None:
-            self._3dgs_exporter.close()
         return self.env.close()
 
     """
