@@ -58,7 +58,11 @@ class CudaIpcExporter:
                     self.signal_port = ipc_cfg.get("signal_port", self.signal_port)
                     
                     rendering_cfg = cfg.get("rendering", {})
-                    self.camera_name = rendering_cfg.get("camera_name", self.camera_name)
+                    new_camera_name = rendering_cfg.get("camera_name", self.camera_name)
+                    if new_camera_name != self.camera_name:
+                        print(f"[CudaIpcExporter] Camera name changed from '{self.camera_name}' to '{new_camera_name}', triggering re-discovery...")
+                        self.camera_name = new_camera_name
+                        self.camera_prim = None
                     self.active_env_idx = rendering_cfg.get("active_env_idx", self.active_env_idx)
                     self.shm_file_path = self.config_path.resolve().parent / self.shm_name
                     print(f"[CudaIpcExporter] Loaded config from '{self.config_path}' -> active_env_idx: {self.active_env_idx}, camera_name: '{self.camera_name}'")
@@ -104,6 +108,15 @@ class CudaIpcExporter:
         
         target_cam = self.camera_name.lower()
         from pxr import UsdGeom
+        
+        # 0. 优先匹配 Omniverse Kit 的 Perspective 视口编辑相机
+        if target_cam == "perspective" or target_cam == "persp" or target_cam == "omniversekit_persp":
+            for prim in self.stage.Traverse():
+                if prim.GetTypeName() == "Camera":
+                    ppath = prim.GetPath().pathString.lower()
+                    if "/omniversekit_persp" in ppath:
+                        print(f"[CudaIpcExporter] Successfully bound to editor perspective viewport camera: '{prim.GetPath().pathString}'")
+                        return prim
         
         # 1. 尝试模糊匹配名称
         for prim in self.stage.Traverse():
