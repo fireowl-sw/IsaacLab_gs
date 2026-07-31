@@ -216,19 +216,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         if env.unwrapped.num_envs == 1:
             try:
                 from isaaclab.devices.keyboard import Se2Keyboard, Se2KeyboardCfg
-                import numpy as np
-                teleop_device = Se2Keyboard(Se2KeyboardCfg(v_x_sensitivity=0.8, v_y_sensitivity=0.4, omega_z_sensitivity=1.0))
+                # 恢复 Isaac Lab 默认键盘设备（使用方向键），并将速度灵敏度限制在安全的 0.3 m/s 内
+                teleop_device = Se2Keyboard(Se2KeyboardCfg(v_x_sensitivity=0.3, v_y_sensitivity=0.3, omega_z_sensitivity=0.8))
                 
-                # 为满足用户习惯，直接在按键映射中注入 W/S/A/D 支持
-                teleop_device._INPUT_KEY_MAPPING["W"] = np.asarray([1.0, 0.0, 0.0]) * teleop_device.v_x_sensitivity
-                teleop_device._INPUT_KEY_MAPPING["S"] = np.asarray([-1.0, 0.0, 0.0]) * teleop_device.v_x_sensitivity
-                teleop_device._INPUT_KEY_MAPPING["A"] = np.asarray([0.0, 0.0, 1.0]) * teleop_device.omega_z_sensitivity
-                teleop_device._INPUT_KEY_MAPPING["D"] = np.asarray([0.0, 0.0, -1.0]) * teleop_device.omega_z_sensitivity
+                # 阻断环境自身的随机重采样和控制覆盖，防止指令打架
+                env.unwrapped.command_manager.get_term("base_velocity").time_left[:] = 1e9
+                env.unwrapped.command_manager.get_term("base_velocity").is_heading_env[:] = False
+                env.unwrapped.command_manager.get_term("base_velocity").is_standing_env[:] = False
                 
-                print("[INFO] Keyboard teleoperation enabled!")
+                print("[INFO] Keyboard teleoperation enabled! (Using Default Arrow Keys)")
                 print("====================================================")
-                print("  W / ↑ : Move Forward     S / ↓ : Move Backward")
-                print("  A / Z : Turn Left        D / X : Turn Right")
+                print("  ↑ : Move Forward     ↓ : Move Backward")
+                print("  ← : Turn Left        → : Turn Right")
+                print("  SPACE : Reset Velocity to 0")
                 print("====================================================")
             except Exception as e:
                 print(f"[WARNING] Failed to initialize keyboard device: {e}")
