@@ -168,12 +168,12 @@ class CudaIpcExporter:
 
         # 1. 批量在 GPU 上合成仿射变换矩阵
         # pos shape: [num_envs, num_links, 3]
-        # quat shape: [num_envs, num_links, 4] (wxyz format)
+        # quat shape: [num_envs, num_links, 4] (xyzw format)
         pos = env.unwrapped.scene["robot"].data.body_pos_w[:, :num_links]
         quat = env.unwrapped.scene["robot"].data.body_quat_w[:, :num_links]
         
-        # 转换为 xyzw 并生成旋转矩阵 [num_envs, num_links, 3, 3]
-        quat_xyzw = quat.roll(-1, dims=-1)
+        # 已经为 xyzw 格式，直接生成旋转矩阵 [num_envs, num_links, 3, 3]
+        quat_xyzw = quat
         rotation_gpu = matrix_from_quat(quat_xyzw)
 
         # 初始化 homogeneous 变换矩阵并向量化填充
