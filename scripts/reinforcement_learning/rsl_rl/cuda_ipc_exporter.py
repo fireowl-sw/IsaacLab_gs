@@ -135,7 +135,7 @@ class CudaIpcExporter:
 
         # 首次发现关节列表元数据并写入 SHM
         if len(self.link_names) == 0:
-            self.link_names = env.unwrapped.scene.robot.data.body_names
+            self.link_names = env.unwrapped.scene["robot"].data.body_names
             # 做一次静态对齐校验前验
             print("\n" + "="*50)
             print("[CudaIpcExporter] Pre-verification link alignment:")
@@ -155,8 +155,8 @@ class CudaIpcExporter:
         # 1. 批量在 GPU 上合成仿射变换矩阵
         # pos shape: [num_envs, num_links, 3]
         # quat shape: [num_envs, num_links, 4] (wxyz format)
-        pos = env.unwrapped.scene.robot.data.body_pos_w[:, :num_links]
-        quat = env.unwrapped.scene.robot.data.body_quat_w[:, :num_links]
+        pos = env.unwrapped.scene["robot"].data.body_pos_w[:, :num_links]
+        quat = env.unwrapped.scene["robot"].data.body_quat_w[:, :num_links]
         
         # 转换为 xyzw 并生成旋转矩阵 [num_envs, num_links, 3, 3]
         quat_xyzw = quat.roll(-1, dims=-1)
