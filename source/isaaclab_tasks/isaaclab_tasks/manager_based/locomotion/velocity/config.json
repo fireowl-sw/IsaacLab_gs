@@ -1,0 +1,24 @@
+{
+  "robot_stl_dir": "/home/ubt/3dgs_evaluation/ubt_scene_asset/walker_astron_description/walker_astron_description/meshes/walker_astron_v1",
+  "robot_ply_output_dir": "/home/ubt/3dgs_evaluation/robot_3dgs_toolbox/outputs/robot_ply/",
+  "background_ply_path": "/home/ubt/3dgs_evaluation/ubt_scene_asset/point_cloud_29999.ply",
+  "pose_json_path": "/home/ubt/3dgs_evaluation/ubt_scene_asset/isaac_outputs/transforms.json",
+  "conversion": {
+    "num_points": 20000,
+    "scale_val": 0.003,
+    "rgb_color": [0.7, 0.7, 0.7]
+  },
+  "rendering": {
+    "resolution": [1920, 1080],
+    "camera_name": "head_stereo_left_Camera",
+    "active_env_idx": 0,
+    "output_dir": "/home/ubt/3dgs_evaluation/robot_3dgs_toolbox/outputs/rendered_frames/"
+  },
+  "ipc": {
+    "shm_name": "robot_3dgs_shm",
+    "max_envs": 64,
+    "max_links": 64,
+    "signal_port": 12347,
+    "show_window": false
+  }
+}

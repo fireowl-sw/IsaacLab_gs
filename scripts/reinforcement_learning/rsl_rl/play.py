@@ -238,6 +238,16 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
         dt = env.unwrapped.step_dt
 
+        # [3DGS IPC Exporter Hook]
+        ipc_exporter = None
+        if env.unwrapped.num_envs <= 64:
+            try:
+                from .cuda_ipc_exporter import CudaIpcExporter
+                ipc_exporter = CudaIpcExporter(env.unwrapped.sim.stage, config_path="source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config.json")
+                ipc_exporter.start()
+            except Exception as e:
+                print(f"[3DGS IPC Exporter Hook] Failed to initialize: {e}")
+
         # reset environment
         obs = env.get_observations()
         timestep = 0
@@ -255,6 +265,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     actions = policy(obs)
                     # env stepping
                     obs, _, dones, _ = env.step(actions)
+                    
+                    # [3DGS IPC Exporter Hook]
+                    if ipc_exporter is not None:
+                        ipc_exporter.export_tensors(env)
+                        
                     # reset recurrent states for episodes that have terminated
                     if version.parse(installed_version) >= version.parse("4.0.0"):
                         policy.reset(dones)
@@ -273,6 +288,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             env.close()
         except KeyboardInterrupt:
             pass
+        finally:
+            if ipc_exporter is not None:
+                ipc_exporter.stop()
 
 
 if __name__ == "__main__":
