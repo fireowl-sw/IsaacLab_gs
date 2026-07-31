@@ -242,7 +242,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         ipc_exporter = None
         if env.unwrapped.num_envs <= 64:
             try:
-                from .cuda_ipc_exporter import CudaIpcExporter
+                from cuda_ipc_exporter import CudaIpcExporter
                 ipc_exporter = CudaIpcExporter(env.unwrapped.sim.stage, config_path="source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config.json")
                 ipc_exporter.start()
             except Exception as e:
