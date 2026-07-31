@@ -68,7 +68,7 @@ class WalkerAstronRewards(RewardsCfg):
             "command_name": "base_velocity",
             # 监测左右脚踝的碰撞链接名（.*ankle_roll_link）的接触力
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll_link"),
-            "threshold": 0.4, # 抬脚持续时间阈值达到 0.4 秒以上开始给分
+            "threshold": 0.2, # 抬脚持续时间阈值达到 0.4 秒以上开始给分
         },
     )
     
@@ -118,6 +118,12 @@ class WalkerAstronRewards(RewardsCfg):
         weight=-1.5,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=["head_.*_joint"])},
     )
+    # 10. 惩罚头部关节角速度（压制高频振荡晃动）
+    joint_vel_head = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.05,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["head_.*_joint"])},
+    )
 
 
 @configclass
@@ -145,7 +151,7 @@ class WalkerAstronFlatEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 将场景中的默认仿真机器人替换为我们专属的 Walker Astron 物理刚体配置
         self.scene.robot = WALKER_ASTRON_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # 将并发环境数修改为 1024（默认为 4096，大模型复制 4096 份会吃满 128GB 内存导致系统极慢甚至爆内存）
-        self.scene.num_envs = 256
+        self.scene.num_envs = 4096
         
         # === 3. 重心、躯干物理事件与终止条件绑定 ===
         # 绑定质量随机扰动（Events）和终止碰撞条件（Base Contact）到 Astron 的胸腔 link 上
@@ -158,13 +164,13 @@ class WalkerAstronFlatEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         
         # === 4. 指令速度范围限制 ===
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.0)  # 允许后退(-0.5m/s)到前进(1.0m/s)的期望速度
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.3, 0.5)  # 允许后退(-0.5m/s)到前进(1.0m/s)的期望速度
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)  # 禁用横向螃蟹步移动
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0) # 允许最大偏航转向速度 (-1.0 到 1.0 rad/s)
         
         # === 5. 平衡性能与控制频率平滑微调 ===
         self.rewards.undesired_contacts = None
-        self.rewards.flat_orientation_l2.weight = -5.0 # 极强惩罚躯干（Base）的歪斜，从 -3.0 提高到 -5.0，迫使机器人保持脊椎垂直
+        self.rewards.flat_orientation_l2.weight = -2.0 # 极强惩罚躯干（Base）的歪斜，从 -3.0 提高到 -5.0，迫使机器人保持脊椎垂直
         self.rewards.dof_torques_l2.weight = 0.0
         self.rewards.action_rate_l2.weight = -0.005    # 惩罚控制动作输出的突变，让电机指令更平滑，防止抖动
         self.rewards.dof_acc_l2.weight = -1.25e-7      # 惩罚过大的关节加速度

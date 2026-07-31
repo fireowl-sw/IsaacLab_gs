@@ -212,6 +212,10 @@ class CudaIpcExporter:
         # quat shape: [num_envs, num_links, 4] (xyzw format)
         pos = env.unwrapped.scene["robot"].data.body_pos_w[:, :num_links]
         quat = env.unwrapped.scene["robot"].data.body_quat_w[:, :num_links]
+        num_envs = min(pos.shape[0], self.max_envs)
+        # 只取前 max_envs 个环境的数据，防止训练时 env 数超出 SHM 容量
+        pos = pos[:num_envs]
+        quat = quat[:num_envs]
         
         # 已经为 xyzw 格式，直接生成旋转矩阵 [num_envs, num_links, 3, 3]
         quat_xyzw = quat
@@ -304,7 +308,7 @@ class CudaIpcExporter:
             for link_i in range(self.max_links):
                 full_links_mat[env_i, link_i] = np.eye(4, dtype=np.float32)
         
-        full_links_mat[:num_envs, :num_links] = links_mat_np
+        full_links_mat[:num_envs, :num_links] = links_mat_np[:num_envs, :num_links]
 
         # 写入矩阵数据到 mmap
         self.mmap_obj.seek(links_offset)

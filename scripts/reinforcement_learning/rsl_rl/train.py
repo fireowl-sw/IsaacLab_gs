@@ -241,6 +241,25 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
         dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
 
+        # [3DGS IPC Exporter Hook for Training Visualization]
+        ipc_exporter = None
+        try:
+            from cuda_ipc_exporter import CudaIpcExporter
+            ipc_exporter = CudaIpcExporter(
+                env.unwrapped.sim.stage,
+                config_path="source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config.json"
+            )
+            ipc_exporter.start()
+            _original_step = env.step
+            def _step_with_export(actions):
+                result = _original_step(actions)
+                ipc_exporter.export_tensors(env)
+                return result
+            env.step = _step_with_export
+            print("[3DGS IPC Exporter] Training visualization hook installed.")
+        except Exception as e:
+            print(f"[3DGS IPC Exporter] Training hook skipped (non-fatal): {e}")
+
         # run training
         try:
             runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
@@ -249,6 +268,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             env.close()
         except KeyboardInterrupt:
             pass
+        finally:
+            if ipc_exporter is not None:
+                ipc_exporter.stop()
 
 
 if __name__ == "__main__":
