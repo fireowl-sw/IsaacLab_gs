@@ -101,11 +101,11 @@ class WalkerAstronRewards(RewardsCfg):
     )
     feet_air_time = RewTerm(
         func=mdp.feet_air_time_positive_biped,
-        weight=0.75,
+        weight=1.5,
         params={
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll_link"),
-            "threshold": 0.4,
+            "threshold": 0.22,
         },
     )
     feet_slide = RewTerm(
@@ -169,7 +169,7 @@ class WalkerAstronFlatEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         
         # === 4. 指令速度范围限制 ===
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.3, 0.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.4, 0.9)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
         
@@ -180,7 +180,7 @@ class WalkerAstronFlatEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.ang_vel_xy_l2.weight = -0.05
         self.rewards.dof_torques_l2.weight = -2.0e-6
         self.rewards.dof_torques_l2.params["asset_cfg"] = SceneEntityCfg("robot", joint_names=ACTIVE_JOINTS)
-        self.rewards.action_rate_l2.weight = -0.005
+        self.rewards.action_rate_l2.weight = -0.002
         self.rewards.dof_acc_l2.weight = -1.0e-7
 
         # === 6. 精简动作与观测空间（限制为 23 个 Active Joints） ===

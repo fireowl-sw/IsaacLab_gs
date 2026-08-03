@@ -281,8 +281,11 @@ class CudaIpcExporter:
                 for env_i in range(num_envs):
                     # 获取该环境对应连杆的实时 GPU 齐次变换矩阵
                     link_mat_t = links_mat_np[env_i, self.camera_parent_link_idx]
-                    # 行优先矩阵乘法：M_camera_world_t = M_camera_local_offset @ M_link_world_t
-                    cams_mat[env_i] = self.camera_local_offset @ link_mat_t
+                    # 消除专属于 CAD 网格的 R_z180 翻转，还原相机在 USD 空间下的真正朝向
+                    link_mat_t_usd = link_mat_t.copy()
+                    link_mat_t_usd[0:2, :3] *= -1
+                    # 行优先矩阵乘法：M_camera_world_t = M_camera_local_offset @ M_link_world_t_usd
+                    cams_mat[env_i] = self.camera_local_offset @ link_mat_t_usd
             else:
                 world_transform = camera_geom.ComputeLocalToWorldTransform(sim_time)
                 cam_mat = np.array(world_transform, dtype=np.float32)

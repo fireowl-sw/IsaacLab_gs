@@ -46,17 +46,17 @@ WALKER_ASTRON_CFG = ArticulationCfg(
             # === 左腿关节 (Left Leg) ===
             "L_hip_roll_joint": 0.0,      # 髋关节翻滚角 (侧摆)
             "L_hip_yaw_joint": 0.0,       # 髋关节航向角 (偏航)
-            "L_hip_pitch_joint": -0.1,    # 髋关节俯仰角 (前屈)
-            "L_knee_pitch_joint": 0.2,     # 膝关节俯仰角 (屈膝)
-            "L_ankle_pitch_joint": -0.1,   # 踝关节俯仰角 (勾脚)
+            "L_hip_pitch_joint": -0.26,    # 髋关节俯仰角 (前屈)
+            "L_knee_pitch_joint": 0.52,     # 膝关节俯仰角 (屈膝)
+            "L_ankle_pitch_joint": -0.26,   # 踝关节俯仰角 (勾脚)
             "L_ankle_roll_joint": 0.0,     # 踝关节翻滚角
             
             # === 右腿关节 (Right Leg) ===
             "R_hip_roll_joint": 0.0,
             "R_hip_yaw_joint": 0.0,
-            "R_hip_pitch_joint": -0.1,
-            "R_knee_pitch_joint": 0.2,
-            "R_ankle_pitch_joint": -0.1,
+            "R_hip_pitch_joint": -0.26,
+            "R_knee_pitch_joint": 0.52,
+            "R_ankle_pitch_joint": -0.26,
             "R_ankle_roll_joint": 0.0,
             
             # === 腰部关节 (Waist) ===
@@ -68,7 +68,7 @@ WALKER_ASTRON_CFG = ArticulationCfg(
             "L_shoulder_pitch_joint": 0.0, # 肩部俯仰
             "L_shoulder_roll_joint": 0.0,   # 肩部外展
             "L_shoulder_yaw_joint": 0.0,    # 肩部旋转
-            "L_elbow_pitch_joint": 0.0,    # 肘部屈伸
+            "L_elbow_pitch_joint": 0.1,    # 肘部屈伸
             "L_elbow_yaw_joint": 0.0,       # 肘部旋转
             "L_wrist_roll_joint": 0.0,      # 腕部翻滚
             "L_wrist_pitch_joint": 0.0,     # 腕部俯仰
@@ -77,7 +77,7 @@ WALKER_ASTRON_CFG = ArticulationCfg(
             "R_shoulder_pitch_joint": 0.0,
             "R_shoulder_roll_joint": 0.0,
             "R_shoulder_yaw_joint": 0.0,
-            "R_elbow_pitch_joint": 0.0,
+            "R_elbow_pitch_joint": 0.1,
             "R_elbow_yaw_joint": 0.0,
             "R_wrist_roll_joint": 0.0,
             "R_wrist_pitch_joint": 0.0,
