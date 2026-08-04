@@ -66,9 +66,11 @@ class CudaIpcExporter:
                         self.camera_prim = None
                         self.camera_parent_link_idx = -1
                         self.camera_local_offset = None
-                    self.active_env_idx = rendering_cfg.get("active_env_idx", self.active_env_idx)
+                    new_env_idx = rendering_cfg.get("active_env_idx", self.active_env_idx)
+                    if new_env_idx != self.active_env_idx:
+                        print(f"[CudaIpcExporter] Active env changed from {self.active_env_idx} to {new_env_idx}")
+                        self.active_env_idx = new_env_idx
                     self.shm_file_path = self.config_path.resolve().parent / self.shm_name
-                    print(f"[CudaIpcExporter] Loaded config from '{self.config_path}' -> active_env_idx: {self.active_env_idx}, camera_name: '{self.camera_name}'")
             except Exception as e:
                 print(f"[CudaIpcExporter] Config load warning: {e}")
 
